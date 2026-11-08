@@ -1,0 +1,51 @@
+name: Tests and Linters 🧪
+
+on: [ pull_request ]
+
+jobs:
+  tests-and-linters:
+    name: "Python ${{ matrix.python-version }} on ${{ matrix.os }}"
+    runs-on: "${{ matrix.os }}"
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Install dependencies for viewer test
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Checkout jumanji 🐍
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # fetch base branch so pre-commit can diff the PR range
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"  # invalidate cache when the lockfile changes
+          python-version: "${{ matrix.python-version }}"
+
+      - name: Install dependencies 🔧
+        run: uv sync --locked --all-extras
+
+      - name: Run linters 🖌️
+        # Only lint files changed in the PR (ty still checks the whole project via pass_filenames: false)
+        run: >-
+          uv run pre-commit run --verbose
+          --from-ref ${{ github.event.pull_request.base.sha }}
+          --to-ref ${{ github.event.pull_request.head.sha }}
+
+      - name: Run tests 🧪
+        run: uv run pytest -n 2 --cov=jumanji --cov-report=term-missing --junit-xml=test-results.xml -vv jumanji
+
+      - name: Run coverage
+        run: |
+          uv run coverage html --directory=coverage_html_report
+          uv run coverage report --fail-under=80
+
+      - name: Test build docs 📖
+        run: uv run mkdocs build --verbose --site-dir docs_public
