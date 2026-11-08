@@ -29,7 +29,7 @@ classifiers = [
 dependencies = [
   "chex>=0.1.3",
   "dm-env>=1.5",
-  "esquilax>=2.0.0",
+  "esquilax>=2.1.0",
   "gymnasium>=1.0",
   "huggingface-hub",
   "jax>=0.4.27", # jnp.clip(x, min=, max=) signature (Array API); a_min/a_max removed in 0.8.0
